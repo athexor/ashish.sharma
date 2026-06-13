@@ -1,0 +1,108 @@
+import { Github, Linkedin, Mail, FileText, ArrowUpRight } from "lucide-react";
+
+const links = [
+  {
+    label: "GitHub",
+    handle: "@ashishsharma",
+    href: "https://github.com",
+    icon: Github,
+    description: "Source code and open source work",
+  },
+  {
+    label: "LinkedIn",
+    handle: "Ashish Sharma",
+    href: "https://linkedin.com",
+    icon: Linkedin,
+    description: "Professional background and experience",
+  },
+  {
+    label: "Email",
+    handle: "ashish@example.com",
+    href: "mailto:ashish@example.com",
+    icon: Mail,
+    description: "For serious inquiries and collaborations",
+  },
+  {
+    label: "Resume",
+    handle: "View PDF",
+    href: "#",
+    icon: FileText,
+    description: "Full engineering background",
+  },
+];
+
+export function Contact() {
+  return (
+    <section id="contact" className="py-24 border-t border-border">
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Section header */}
+        <div className="mb-16">
+          <p
+            className="text-xs text-muted-foreground tracking-widest uppercase mb-3"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            09 — Connect
+          </p>
+          <h2 className="text-3xl md:text-4xl text-foreground" style={{ fontWeight: 300 }}>
+            Contact
+          </h2>
+          <p className="text-sm text-muted-foreground mt-3 max-w-md leading-relaxed">
+            Open to conversations about APIs, developer tools, infrastructure, and
+            early-stage product ideas. Reach out if you're building something interesting.
+          </p>
+        </div>
+
+        {/* Links grid */}
+        <div className="grid md:grid-cols-2 gap-px bg-border mb-16">
+          {links.map(({ label, handle, href, icon: Icon, description }) => (
+            <a
+              key={label}
+              href={href}
+              target={href.startsWith("http") ? "_blank" : undefined}
+              rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+              className="bg-background p-8 flex items-start gap-5 group hover:bg-muted/20 transition-colors"
+            >
+              <div className="mt-0.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                <Icon size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-foreground" style={{ fontWeight: 500 }}>
+                    {label}
+                  </span>
+                  <ArrowUpRight
+                    size={14}
+                    className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                </div>
+                <p
+                  className="text-xs text-muted-foreground mb-2"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {handle}
+                </p>
+                <p className="text-xs text-muted-foreground">{description}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-8 border-t border-border">
+          <span
+            className="text-xs text-muted-foreground"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            Ashish Sharma — Backend Software Engineer
+          </span>
+          <span
+            className="text-xs text-muted-foreground"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            Building in public · {new Date().getFullYear()}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}

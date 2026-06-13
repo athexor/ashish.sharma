@@ -1,0 +1,33 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Base styles */
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  font-family: 'Inter', system-ui, sans-serif;
+} 
+
+#root { 
+  height: 100%; 
+}
+
+/* Utility classes for common hardcoded styles */
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+
+.font-mono { font-family: var(--font-mono); }
+
+.text-xs-small { font-size: 0.9rem; }
+.text-sm-large { font-size: 1.1rem; }
+.text-lg-small { font-size: 1.2rem; }
+
+.rotate-45 { transform: rotate(45deg); }
+.rotate-0 { transform: rotate(0deg); }
+
+/* Progress bar utility */
+.progress-bar { 
+  transition: width 0.5s ease-in-out;
+}
