@@ -1,35 +1,17 @@
 import { Github, Linkedin, Mail, FileText, ArrowUpRight } from "lucide-react";
+import { mockContactData } from "../data/mockContactData";
 
-const links = [
-  {
-    label: "GitHub",
-    handle: "@ashishsharma",
-    href: "https://github.com",
-    icon: Github,
-    description: "Source code and open source work",
-  },
-  {
-    label: "LinkedIn",
-    handle: "Ashish Sharma",
-    href: "https://linkedin.com",
-    icon: Linkedin,
-    description: "Professional background and experience",
-  },
-  {
-    label: "Email",
-    handle: "ashish@example.com",
-    href: "mailto:ashish@example.com",
-    icon: Mail,
-    description: "For serious inquiries and collaborations",
-  },
-  {
-    label: "Resume",
-    handle: "View PDF",
-    href: "#",
-    icon: FileText,
-    description: "Full engineering background",
-  },
-];
+const iconMap = {
+  Github,
+  Linkedin,
+  Mail,
+  FileText,
+};
+
+const links = mockContactData.map(link => ({
+  ...link,
+  icon: iconMap[link.icon as keyof typeof iconMap] || Github
+}));
 
 export function Contact() {
   return (
