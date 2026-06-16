@@ -1,20 +1,16 @@
 import ApiService from './apiService';
 import { mockContactData } from '../data/mockContactData';
-
-export interface ContactData {
-  github: string;
-  linkedin: string;
-  email: string;
-  resume: string;
-}
+import { config } from '../config/env';
 
 class ContactService {
-  static async getContactLinks(): Promise<ContactData> {
+  static async getContactLinks() {
+    if (!config.backendUrl) {
+      return mockContactData;
+    }
     try {
-      const response = await ApiService.get('contact');
-      return response;
+      return await ApiService.get('contact');
     } catch (error) {
-      console.error('Failed to fetch contact links:', error);
+      console.error('Failed to fetch contact links, falling back to mock:', error);
       return mockContactData;
     }
   }
