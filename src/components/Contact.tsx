@@ -19,10 +19,7 @@ export function Contact() {
       <div className="max-w-6xl mx-auto px-6">
         {/* Section header */}
         <div className="mb-16">
-          <p
-            className="text-xs text-muted-foreground tracking-widest uppercase mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <p className="text-xs text-muted-foreground tracking-widest uppercase mb-3 font-mono">
             09 — Connect
           </p>
           <h2 className="text-3xl md:text-4xl text-foreground" style={{ fontWeight: 300 }}>
