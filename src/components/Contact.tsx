@@ -1,16 +1,16 @@
-import { Github, Linkedin, Mail, FileText, ArrowUpRight, LucideIcon } from "lucide-react";
+import { Github, Linkedin, Mail, FileText, ArrowUpRight } from "lucide-react";
 import { mockContactData } from "../data/mockContactData";
 
-const iconMap: Record<string, LucideIcon> = {
-  Github,
-  Linkedin,
+const iconMap = {
+  Github: Github,
+  Linkedin: Linkedin,
   Mail,
   FileText,
 };
 
-const links = mockContactData.map((link) => ({
+const links = mockContactData.map(link => ({
   ...link,
-  icon: iconMap[link.icon] ?? Github,
+  icon: iconMap[link.icon as keyof typeof iconMap] || Github,
 }));
 
 export function Contact() {
