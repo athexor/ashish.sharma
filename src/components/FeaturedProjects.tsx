@@ -1,4 +1,5 @@
-import { ArrowUpRight, Github } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { FaGithub as Github} from "react-icons/fa6";
 import { useState } from "react";
 
 const projects = [
