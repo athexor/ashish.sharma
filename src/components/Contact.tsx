@@ -1,16 +1,20 @@
-import { Github, Linkedin, Mail, FileText, ArrowUpRight } from "lucide-react";
+import React from "react";
+import { FaGithub, FaLinkedin, FaEnvelope, FaFileLines, FaArrowUpRightFromSquare } from "react-icons/fa6";
 import { mockContactData } from "../data/mockContactData";
 
 const iconMap = {
-  Github: Github,
-  Linkedin: Linkedin,
-  Mail,
-  FileText,
+  Github: FaGithub,
+  Linkedin: FaLinkedin,
+  Mail: FaEnvelope,
+  FileText: FaFileLines,
 };
 
 const links = mockContactData.map(link => ({
   ...link,
-  icon: iconMap[link.icon as keyof typeof iconMap] || Github,
+  icon: link.icon === 'Github' ? FaGithub : 
+         link.icon === 'Linkedin' ? FaLinkedin : 
+         link.icon === 'Mail' ? FaEnvelope : 
+         link.icon === 'FileText' ? FaFileLines : FaGithub,
 }));
 
 export function Contact() {
@@ -33,7 +37,7 @@ export function Contact() {
 
         {/* Links grid */}
         <div className="grid md:grid-cols-2 gap-px bg-border mb-16">
-          {links.map(({ label, handle, href, icon: Icon, description }) => (
+          {links.map(({ label, handle, href, icon, description }) => (
             <a
               key={label}
               href={href}
@@ -42,21 +46,20 @@ export function Contact() {
               className="bg-background p-8 flex items-start gap-5 group hover:bg-muted/20 transition-colors"
             >
               <div className="mt-0.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                <Icon size={18} />
+                {label === 'GitHub' && React.createElement(FaGithub as any, { className: "w-[18px] h-[18px]" })}
+                {label === 'LinkedIn' && React.createElement(FaLinkedin as any, { className: "w-[18px] h-[18px]" })}
+                {label === 'Email' && React.createElement(FaEnvelope as any, { className: "w-[18px] h-[18px]" })}
+                {label === 'Resume' && React.createElement(FaFileLines as any, { className: "w-[18px] h-[18px]" })}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-foreground" style={{ fontWeight: 500 }}>
+                  <span className="text-sm text-foreground font-medium">
                     {label}
                   </span>
-                  <ArrowUpRight
-                    size={14}
-                    className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                  />
+                  {React.createElement(FaArrowUpRightFromSquare as any, { className: "w-[12px] h-[12px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" })}
                 </div>
                 <p
-                  className="text-xs text-muted-foreground mb-2"
-                  style={{ fontFamily: "var(--font-mono)" }}
+                  className="text-xs text-muted-foreground mb-2 font-mono"
                 >
                   {handle}
                 </p>
@@ -69,14 +72,12 @@ export function Contact() {
         {/* Footer */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-8 border-t border-border">
           <span
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: "var(--font-mono)" }}
+            className="text-xs text-muted-foreground font-mono"
           >
             Ashish Sharma — Backend Software Engineer
           </span>
           <span
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: "var(--font-mono)" }}
+            className="text-xs text-muted-foreground font-mono"
           >
             Building in public · {new Date().getFullYear()}
           </span>
