@@ -1,4 +1,5 @@
-import { ArrowUpRight, Github, Linkedin, FileText } from "lucide-react";
+import { ArrowUpRight, FileText } from "lucide-react";
+import { FaGithub, FaLinkedin } from "react-icons/fa6";
 
 export function Hero() {
   return (
@@ -65,7 +66,7 @@ export function Hero() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground text-sm hover:bg-muted transition-colors"
             >
-              <Github size={14} />
+              <FaGithub size={14} />
               GitHub
             </a>
             <a
@@ -74,7 +75,7 @@ export function Hero() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground text-sm hover:bg-muted transition-colors"
             >
-              <Linkedin size={14} />
+              <FaLinkedin size={14} />
               LinkedIn
             </a>
           </div>
