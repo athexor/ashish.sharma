@@ -69,16 +69,10 @@ export function Contact() {
 
         {/* Footer */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-8 border-t border-border">
-          <span
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <span className="text-xs text-muted-foreground font-mono">
             Ashish Sharma — Backend Software Engineer
           </span>
-          <span
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <span className="text-xs text-muted-foreground font-mono">
             Building in public · {new Date().getFullYear()}
           </span>
         </div>
