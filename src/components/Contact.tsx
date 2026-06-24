@@ -55,10 +55,7 @@ export function Contact() {
                     className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   />
                 </div>
-                <p
-                  className="text-xs text-muted-foreground mb-2"
-                  style={{ fontFamily: "var(--font-mono)" }}
-                >
+                <p className="text-xs text-muted-foreground mb-2 font-mono">
                   {handle}
                 </p>
                 <p className="text-xs text-muted-foreground">{description}</p>
