@@ -47,7 +47,7 @@ export function Contact() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-foreground" style={{ fontWeight: 500 }}>
+                  <span className="text-sm text-foreground font-medium">
                     {label}
                   </span>
                   <ArrowUpRight
