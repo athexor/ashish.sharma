@@ -2,16 +2,20 @@ import { Mail, FileText, ArrowUpRight } from "lucide-react";
 import { FaGithub, FaLinkedin } from "react-icons/fa6";
 import { mockContactData } from "../data/mockContactData";
 
-const iconMap = {
-  Github: FaGithub,
-  Linkedin: FaLinkedin,
-  Mail,
-  FileText,
+import type { IconBaseProps } from "react-icons";
+
+type AppIcon = (props: IconBaseProps) => React.ReactElement | null;
+
+const iconMap: Record<string, AppIcon> = {
+  Github: FaGithub as AppIcon,
+  Linkedin: FaLinkedin as AppIcon,
+  Mail: Mail as unknown as AppIcon,
+  FileText: FileText as unknown as AppIcon,
 };
 
 const links = mockContactData.map(link => ({
   ...link,
-  icon: iconMap[link.icon as keyof typeof iconMap] || FaGithub,
+  icon: iconMap[link.icon as keyof typeof iconMap],
 }));
 
 export function Contact() {
