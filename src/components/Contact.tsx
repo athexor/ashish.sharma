@@ -1,8 +1,9 @@
 import { Mail, FileText, ArrowUpRight } from "lucide-react";
 import { FaGithub, FaLinkedin } from "react-icons/fa6";
 import { mockContactData } from "../data/mockContactData";
-
 import type { IconBaseProps } from "react-icons";
+
+const ArrowUpRightIcon = ArrowUpRight as unknown as (props: { size?: number; className?: string }) => React.ReactElement;
 
 type AppIcon = (props: IconBaseProps) => React.ReactElement | null;
 
@@ -54,7 +55,7 @@ export function Contact() {
                   <span className="text-sm text-foreground font-medium">
                     {label}
                   </span>
-                  <ArrowUpRight
+                  <ArrowUpRightIcon
                     size={14}
                     className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   />
