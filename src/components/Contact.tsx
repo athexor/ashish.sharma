@@ -1,8 +1,8 @@
 import { Mail, FileText, ArrowUpRight } from "lucide-react";
 import { FaGithub, FaLinkedin } from "react-icons/fa6";
 import { mockContactData } from "../data/mockContactData";
-
 import type { IconBaseProps } from "react-icons";
+
 const ArrowUpRightIcon = ArrowUpRight as unknown as (props: { size?: number; className?: string }) => React.ReactElement;
 
 type AppIcon = (props: IconBaseProps) => React.ReactElement | null;
