@@ -1,7 +1,7 @@
 export const mockContactData = [
   {
     label: "GitHub",
-    handle: "@ashishsharma",
+    handle: "@athexor",
     href: "https://github.com/athexor/",
     icon: "Github",
     description: "Source code and open source work",
