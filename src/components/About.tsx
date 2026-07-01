@@ -52,9 +52,7 @@ export function About() {
           <div className="space-y-8">
             <div>
               <p
-                className="text-xs text-muted-foreground tracking-widest uppercase mb-4"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
+                className="text-xs text-muted-foreground tracking-widest uppercase mb-4 font-mono">
                 Currently
               </p>
               <ul className="space-y-2">
