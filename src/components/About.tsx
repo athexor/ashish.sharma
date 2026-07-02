@@ -84,9 +84,7 @@ export function About() {
                 ].map((tech) => (
                   <span
                     key={tech}
-                    className="text-xs text-muted-foreground border border-border px-2 py-1"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className="text-xs text-muted-foreground border border-border px-2 py-1 font-mono">
                     {tech}
                   </span>
                 ))}
