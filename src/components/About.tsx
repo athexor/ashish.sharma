@@ -71,9 +71,7 @@ export function About() {
 
             <div>
               <p
-                className="text-xs text-muted-foreground tracking-widest uppercase mb-4"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
+                className="text-xs text-muted-foreground tracking-widest uppercase mb-4 font-mono">
                 Technologies
               </p>
               <div className="flex flex-wrap gap-2">
