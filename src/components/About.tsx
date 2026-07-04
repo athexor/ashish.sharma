@@ -91,9 +91,7 @@ export function About() {
 
             <div>
               <p
-                className="text-xs text-muted-foreground tracking-widest uppercase mb-4"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
+                className="text-xs text-muted-foreground tracking-widest uppercase mb-4 font-mono">
                 Reading
               </p>
               <ul className="space-y-2">
