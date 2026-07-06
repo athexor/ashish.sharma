@@ -50,9 +50,7 @@ export function FeaturedProjects() {
         {/* Section header */}
         <div className="mb-16">
           <p
-            className="text-xs text-muted-foreground tracking-widest uppercase mb-3"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+            className="text-xs text-muted-foreground tracking-widest uppercase mb-3 font-mono">
             02 — Work
           </p>
           <h2 className="text-3xl md:text-4xl text-foreground" style={{ fontWeight: 300 }}>
