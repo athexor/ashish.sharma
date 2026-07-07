@@ -12,8 +12,11 @@ jobs:
       pull-requests: write
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run Security Scan
-        uses: niteshsaini/offload-cspm/github-action@main
+        uses: ./.github/actions/offload-security-scan
         with:
           api_url: ${{ secrets.OFFLOAD_API_URL }}
           api_key: ${{ secrets.OFFLOAD_API_KEY }}

@@ -1,0 +1,171 @@
+name: "Offload Security Scan"
+description: "Trigger an automated security scan against your application and get results as a PR comment"
+author: "Offload Security"
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  api_url:
+    description: "Base URL of your Offload Security platform (e.g. https://security.example.com)"
+    required: true
+  api_key:
+    description: "API key with scans:trigger and scans:read scopes. Create one at /settings/api-keys with the ci_cd_basic preset."
+    required: true
+  signature_identity:
+    description: >
+      Strict Cosign verification: enforce the signer's OIDC identity URL.
+      Example: https://github.com/myorg/myrepo/.github/workflows/release.yml@refs/heads/main
+      When set together with ``signature_oidc_issuer``, signature scans fail
+      unless the image was signed by exactly that identity.
+    required: false
+    default: ""
+  signature_oidc_issuer:
+    description: >
+      Strict Cosign verification: enforce the signer's OIDC issuer.
+      Example: https://token.actions.githubusercontent.com
+    required: false
+    default: ""
+  secrets_only_verified:
+    description: >
+      TruffleHog: when true, only report secrets that TruffleHog actively
+      validated against the issuing service (e.g. tested an AWS key with
+      STS). Cuts false positives drastically; recommended for CI.
+    required: false
+    default: "true"
+  target_url:
+    description: >
+      Target to scan. For web scans this is a URL (https://app.example.com).
+      For container scans this is a registry image reference
+      (us-docker.pkg.dev/proj/repo/img:tag or
+      <acct>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>).
+      Required unless ``container_image`` is set.
+    required: false
+    default: ""
+  container_image:
+    description: >
+      Container image reference to scan. Setting this triggers a container
+      scan (vulnerability + sbom + secrets + signature depending on
+      ``scan_types``) rather than a web scan. Mutually exclusive with
+      ``target_url``; if both are given ``container_image`` wins.
+    required: false
+    default: ""
+  cloud_account_id:
+    description: >
+      Optional cloud account ID for container-registry authentication
+      (ECR / GCP Artifact Registry / Azure ACR). Pin to a specific linked
+      account when the user has multiple of the same provider. Without it
+      the platform falls back to "any linked account of the matching
+      provider for this user".
+    required: false
+    default: ""
+  scan_types:
+    description: >
+      Comma-separated list of scan types to run.
+      Web scan options: security_headers, ssl_config, owasp_top_10,
+        technology_detection, waf_detection, owasp_api, zap, nuclei, nmap, testssl.
+      Container scan options: vulnerability (Grype), trivy, sbom (Syft),
+        secrets (TruffleHog layer scan), signature (Cosign / Sigstore verify).
+      Default: all web options for web scans;
+        ``vulnerability,sbom,secrets,signature`` for container scans.
+    required: false
+    default: ""
+  standards:
+    description: >
+      Comma-separated compliance standards to map against.
+      Options: asvs-l1, asvs-l2, owasp-web-top10, owasp-api-top10, nist-ssdf.
+      Default: asvs-l2,owasp-web-top10
+    required: false
+    default: "asvs-l2,owasp-web-top10"
+  fail_on:
+    description: >
+      Severity threshold that causes the action to fail.
+      Options: critical, high, medium, low, none.
+      'none' means never fail regardless of findings.
+    required: false
+    default: "critical"
+  timeout:
+    description: "Maximum time to wait for scan completion in seconds (default: 1800 = 30 minutes)"
+    required: false
+    default: "1800"
+  poll_interval:
+    description: "Seconds between status polls (default: 15)"
+    required: false
+    default: "15"
+  comment_on_pr:
+    description: "Whether to post scan results as a PR comment (true/false)"
+    required: false
+    default: "true"
+  scan_options:
+    description: "JSON string of per-tool options, e.g. '{\"zap\": {\"scan_type\": \"full\"}}'"
+    required: false
+    default: "{}"
+  auth_config:
+    description: >
+      JSON string for authenticated scanning.
+      Example: '{"auth_type": "form", "login_url": "https://app.example.com/login",
+      "username": "test@example.com", "password": "secret"}'
+    required: false
+    default: ""
+
+outputs:
+  scan_id:
+    description: "The App Scan ID"
+    value: ${{ steps.scan.outputs.scan_id }}
+  status:
+    description: "Final scan status (completed/failed/timeout)"
+    value: ${{ steps.scan.outputs.status }}
+  total_findings:
+    description: "Total number of findings"
+    value: ${{ steps.scan.outputs.total_findings }}
+  critical_count:
+    description: "Number of critical findings"
+    value: ${{ steps.scan.outputs.critical_count }}
+  high_count:
+    description: "Number of high findings"
+    value: ${{ steps.scan.outputs.high_count }}
+  medium_count:
+    description: "Number of medium findings"
+    value: ${{ steps.scan.outputs.medium_count }}
+  low_count:
+    description: "Number of low findings"
+    value: ${{ steps.scan.outputs.low_count }}
+  info_count:
+    description: "Number of informational findings"
+    value: ${{ steps.scan.outputs.info_count }}
+  security_rating:
+    description: "Security rating (A-F)"
+    value: ${{ steps.scan.outputs.security_rating }}
+  security_score:
+    description: "Security score (0-100)"
+    value: ${{ steps.scan.outputs.security_score }}
+  report_url:
+    description: "URL to download the full HTML report"
+    value: ${{ steps.scan.outputs.report_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Security Scan
+      id: scan
+      shell: bash
+      env:
+        INPUT_API_URL: ${{ inputs.api_url }}
+        INPUT_API_KEY: ${{ inputs.api_key }}
+        INPUT_TARGET_URL: ${{ inputs.target_url }}
+        INPUT_CONTAINER_IMAGE: ${{ inputs.container_image }}
+        INPUT_CLOUD_ACCOUNT_ID: ${{ inputs.cloud_account_id }}
+        INPUT_SCAN_TYPES: ${{ inputs.scan_types }}
+        INPUT_STANDARDS: ${{ inputs.standards }}
+        INPUT_FAIL_ON: ${{ inputs.fail_on }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_POLL_INTERVAL: ${{ inputs.poll_interval }}
+        INPUT_COMMENT_ON_PR: ${{ inputs.comment_on_pr }}
+        INPUT_SCAN_OPTIONS: ${{ inputs.scan_options }}
+        INPUT_AUTH_CONFIG: ${{ inputs.auth_config }}
+        INPUT_SIGNATURE_IDENTITY: ${{ inputs.signature_identity }}
+        INPUT_SIGNATURE_OIDC_ISSUER: ${{ inputs.signature_oidc_issuer }}
+        INPUT_SECRETS_ONLY_VERIFIED: ${{ inputs.secrets_only_verified }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: bash ${{ github.action_path }}/scan.sh
