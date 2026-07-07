@@ -1,0 +1,22 @@
+name: Security Scan
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Run Security Scan
+        uses: niteshsaini/offload-cspm/github-action@main
+        with:
+          api_url: ${{ secrets.OFFLOAD_API_URL }}
+          api_key: ${{ secrets.OFFLOAD_API_KEY }}
+          target_url: https://ashish-sharma-three.vercel.app/
+          fail_on: none
+          comment_on_pr: 'true'
