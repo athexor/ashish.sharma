@@ -350,11 +350,11 @@ fi
 RESULT_DATA="$HTTP_BODY"
 
 # Extract severity counts
-CRITICAL=$(jq_safe "$RESULT_DATA" '.data.severity_counts.critical // 0')
-HIGH=$(jq_safe "$RESULT_DATA" '.data.severity_counts.high // 0')
-MEDIUM=$(jq_safe "$RESULT_DATA" '.data.severity_counts.medium // 0')
-LOW=$(jq_safe "$RESULT_DATA" '.data.severity_counts.low // 0')
-INFO_COUNT=$(jq_safe "$RESULT_DATA" '.data.severity_counts.info // 0')
+CRITICAL=$(jq_safe "$RESULT_DATA" '.data.findings_by_severity.critical // 0')
+HIGH=$(jq_safe "$RESULT_DATA" '.data.findings_by_severity.high // 0')
+MEDIUM=$(jq_safe "$RESULT_DATA" '.data.findings_by_severity.medium // 0')
+LOW=$(jq_safe "$RESULT_DATA" '.data.findings_by_severity.low // 0')
+INFO_COUNT=$(jq_safe "$RESULT_DATA" '.data.findings_by_severity.info // 0')
 TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW + INFO_COUNT))
 
 # Extract rating
