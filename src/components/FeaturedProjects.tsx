@@ -153,9 +153,7 @@ export function FeaturedProjects() {
                       <div className="space-y-6">
                         <div>
                           <p
-                            className="text-xs text-muted-foreground tracking-widest uppercase mb-3"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
+                            className="text-xs text-muted-foreground tracking-widest uppercase mb-3 font-mono">
                             Stack
                           </p>
                           <div className="flex flex-wrap gap-2">
