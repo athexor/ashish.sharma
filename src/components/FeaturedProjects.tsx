@@ -160,9 +160,7 @@ export function FeaturedProjects() {
                             {project.stack.map((t) => (
                               <span
                                 key={t}
-                                className="px-2 py-1 border border-border text-xs text-muted-foreground"
-                                style={{ fontFamily: "var(--font-mono)" }}
-                              >
+                                className="px-2 py-1 border border-border text-xs text-muted-foreground font-mono">
                                 {t}
                               </span>
                             ))}
