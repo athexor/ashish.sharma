@@ -169,9 +169,7 @@ export function FeaturedProjects() {
 
                         <div>
                           <p
-                            className="text-xs text-muted-foreground tracking-widest uppercase mb-3"
-                            style={{ fontFamily: "var(--font-mono)" }}
-                          >
+                            className="text-xs text-muted-foreground tracking-widest uppercase mb-3 font-mono">
                             Links
                           </p>
                           <div className="flex flex-col gap-2">
