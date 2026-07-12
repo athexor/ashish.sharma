@@ -36,9 +36,7 @@ export function Nav({ dark, toggleDark }: NavProps) {
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
         <a
           href="#"
-          className="font-mono text-sm tracking-tight text-foreground hover:text-muted-foreground transition-colors"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
+          className="font-mono text-sm tracking-tight text-foreground hover:text-muted-foreground transition-colors font-mono">
           ashish.sharma
         </a>
 
