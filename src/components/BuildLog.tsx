@@ -80,9 +80,7 @@ export function BuildLog() {
                     {entry.month}
                   </span>
                   <span
-                    className="text-xs text-muted-foreground"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className="text-xs text-muted-foreground font-mono">
                     {entry.year}
                   </span>
                 </div>
