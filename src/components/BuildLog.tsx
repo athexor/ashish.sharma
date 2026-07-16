@@ -89,7 +89,7 @@ export function BuildLog() {
                 <ul className="space-y-2.5">
                   {entry.entries.map((e, j) => (
                     <li key={j} className="flex items-start gap-3">
-                      <span className="text-muted-foreground mt-0.5 shrink-0 text-xs" style={{ fontFamily: "var(--font-mono)" }}>
+                      <span className="text-muted-foreground mt-0.5 shrink-0 text-xs font-mono">
                         →
                       </span>
                       <span className="text-sm text-muted-foreground leading-relaxed">
