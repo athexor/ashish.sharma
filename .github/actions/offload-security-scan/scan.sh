@@ -45,21 +45,30 @@ jq_safe() {
 [[ -z "${INPUT_API_URL:-}" ]] && fail "api_url is required"
 [[ -z "${INPUT_API_KEY:-}" ]] && fail "api_key is required"
 
-# Determine scan mode: ``container_image`` set => container scan path;
-# otherwise the original web-scan flow.  Either input must be supplied.
+# Determine scan mode: ``code_repo`` => SBOM + license release-gate path;
+# ``container_image`` => container scan path; otherwise the original
+# web-scan flow.  One of the three inputs must be supplied.
 SCAN_MODE="web"
-if [[ -n "${INPUT_CONTAINER_IMAGE:-}" ]]; then
+if [[ -n "${INPUT_CODE_REPO:-}" ]]; then
+    SCAN_MODE="code"
+    info "Mode: code (repository ${INPUT_CODE_REPO})"
+elif [[ -n "${INPUT_CONTAINER_IMAGE:-}" ]]; then
     SCAN_MODE="container"
     info "Mode: container (target ${INPUT_CONTAINER_IMAGE})"
 fi
 if [[ "$SCAN_MODE" == "web" && -z "${INPUT_TARGET_URL:-}" ]]; then
-    fail "target_url or container_image is required"
+    fail "code_repo, container_image or target_url is required"
 fi
 
 SEVERITY_LEVELS=("critical" "high" "medium" "low" "info" "none")
 FAIL_ON="${INPUT_FAIL_ON:-critical}"
 TIMEOUT="${INPUT_TIMEOUT:-1800}"
 POLL_INTERVAL="${INPUT_POLL_INTERVAL:-15}"
+
+# Outside GitHub Actions (standalone smoke tests, other CI) these files
+# don't exist; default them so `set -u` doesn't kill the run mid-scan.
+: "${GITHUB_OUTPUT:=/dev/null}"
+: "${GITHUB_STEP_SUMMARY:=/dev/null}"
 
 # Map severity to numeric rank for threshold comparison
 sev_rank() {
@@ -70,9 +79,12 @@ sev_rank() {
     esac
 }
 
-# ── Step 1: Validate auth (optional) ─────────────────────────────────
+# ── Step 1: Validate auth (optional, web mode only) ──────────────────
+# The probe targets INPUT_TARGET_URL; in code/container mode it is
+# meaningless and must not run (a leftover auth_config from a migrated
+# web-scan workflow would otherwise abort the run before it starts).
 
-if [[ -n "${INPUT_AUTH_CONFIG:-}" && "${INPUT_AUTH_CONFIG}" != "{}" ]]; then
+if [[ "$SCAN_MODE" == "web" && -n "${INPUT_AUTH_CONFIG:-}" && "${INPUT_AUTH_CONFIG}" != "{}" ]]; then
     log "Validating authentication configuration"
     PROBE_BODY=$(jq -n \
         --arg url "$INPUT_TARGET_URL" \
@@ -102,6 +114,262 @@ if [[ -n "${INPUT_AUTH_CONFIG:-}" && "${INPUT_AUTH_CONFIG}" != "{}" ]]; then
 fi
 
 # ── Step 2: Trigger the scan ─────────────────────────────────────────
+
+# ── Code scan branch (SBOM + license release gate) ───────────────────
+# When ``code_repo`` is set the platform generates an SBOM (Syft),
+# evaluates dependency CVEs + license policy, and computes the versioned
+# release gate. The verdict is posted as an "offload/release-gate"
+# commit status so branch protection can require it.
+if [[ "$SCAN_MODE" == "code" ]]; then
+    # Commit-status helper. Uses the PR *head* SHA when available —
+    # GITHUB_SHA is the synthetic merge commit on pull_request events and
+    # a status there never shows on the PR.
+    STATUS_TARGET_URL="${INPUT_API_URL%/}/dashboard?section=code-command-center"
+    post_commit_status() {
+        local state="$1" description="$2"
+        [[ "${INPUT_SET_COMMIT_STATUS:-true}" != "true" ]] && return 0
+        if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_REPOSITORY:-}" ]]; then
+            info "No GITHUB_TOKEN / repository context — skipping commit status"
+            return 0
+        fi
+        local sha=""
+        if [[ -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
+            sha=$(jq -r '.pull_request.head.sha // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+        fi
+        sha="${sha:-${GITHUB_SHA:-}}"
+        if [[ -z "$sha" ]]; then
+            warn "No commit SHA available — skipping commit status"
+            return 0
+        fi
+        local payload
+        payload=$(jq -n --arg state "$state" --arg desc "$description" --arg url "$STATUS_TARGET_URL" \
+            '{state: $state, description: ($desc | .[0:140]), context: "offload/release-gate", target_url: $url}')
+        # --fail: without it a 403 (missing `statuses: write`) exits 0 and
+        # the one diagnostic written for that case would never fire.
+        curl -s -S --fail -o /dev/null -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}/statuses/${sha}" \
+            -d "$payload" \
+            && info "Commit status posted: offload/release-gate=${state} (${sha:0:12})" \
+            || warn "Failed to post commit status — check the workflow has 'permissions: statuses: write'"
+    }
+
+    # Reject bad fail_on_gate values up front — falling through to the
+    # weakest mode on a typo ("reviews") would silently un-enforce the gate.
+    FAIL_ON_GATE="${INPUT_FAIL_ON_GATE:-fail}"
+    case "$FAIL_ON_GATE" in
+        none|review|fail) ;;
+        *) fail "Invalid fail_on_gate '${FAIL_ON_GATE}' — use fail, review or none" ;;
+    esac
+
+    log "Starting SBOM + license release-gate scan"
+
+    # Fork PRs: the platform clones ``code_repo`` with its own connection;
+    # a branch that only exists on the contributor's fork can't be scanned.
+    # Fail loudly (with an error status) instead of scanning the wrong tree.
+    if [[ -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
+        PR_HEAD_REPO=$(jq -r '.pull_request.head.repo.full_name // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+        if [[ -n "$PR_HEAD_REPO" && "$PR_HEAD_REPO" != "$INPUT_CODE_REPO" ]]; then
+            post_commit_status "error" "Fork PRs are not supported: the platform scans ${INPUT_CODE_REPO}, not ${PR_HEAD_REPO}"
+            fail "Release-gate scans of fork PRs are not supported (head repo ${PR_HEAD_REPO} != code_repo ${INPUT_CODE_REPO})"
+        fi
+    fi
+
+    # Branch: explicit input → PR head branch → pushed branch.
+    # ``code_branch: default`` forces the repo's default branch (inside
+    # Actions GITHUB_REF_NAME is always set, so empty alone can't).
+    # Tag pushes have no branch — fall back to the default branch.
+    CODE_BRANCH="${INPUT_CODE_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}"
+    if [[ "$CODE_BRANCH" == "default" ]]; then
+        CODE_BRANCH=""
+    elif [[ "${GITHUB_REF_TYPE:-branch}" == "tag" && -z "${INPUT_CODE_BRANCH:-}" && -z "${GITHUB_HEAD_REF:-}" ]]; then
+        warn "Tag ref '${GITHUB_REF_NAME:-}' is not a branch — scanning the default branch"
+        CODE_BRANCH=""
+    fi
+    GIT_PROVIDER="${INPUT_GIT_PROVIDER:-github}"
+    info "Repository: ${INPUT_CODE_REPO} (branch: ${CODE_BRANCH:-<default>}) via ${GIT_PROVIDER}"
+
+    SBOM_BODY=$(jq -n --arg repo "$INPUT_CODE_REPO" --arg branch "$CODE_BRANCH" --arg provider "$GIT_PROVIDER" \
+        '{repo: $repo, branch: $branch, provider: $provider}')
+    RAW=$(api POST "/code/sbom" "$SBOM_BODY") || {
+        post_commit_status "error" "Could not start the SBOM scan (network error)"
+        fail "Failed to reach the platform API"
+    }
+    parse_response "$RAW"
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+        post_commit_status "error" "Could not start the SBOM scan (HTTP ${HTTP_STATUS})"
+        fail "Failed to start SBOM scan (HTTP ${HTTP_STATUS}): ${HTTP_BODY}"
+    fi
+    SBOM_SCAN_ID=$(jq_safe "$HTTP_BODY" '.data.scan_id // empty')
+    if [[ -z "$SBOM_SCAN_ID" ]]; then
+        # Backend refusals can arrive as resolved bodies without a scan_id
+        # (e.g. "No github connection") — surface the real message.
+        API_MSG=$(jq_safe "$HTTP_BODY" '.data.error // .detail.error.message // .message // empty')
+        post_commit_status "error" "SBOM scan refused: ${API_MSG:-no scan_id returned}"
+        fail "SBOM scan was not started: ${API_MSG:-${HTTP_BODY}}"
+    fi
+    info "Scan started: ${SBOM_SCAN_ID}"
+    echo "sbom_scan_id=${SBOM_SCAN_ID}" >> "$GITHUB_OUTPUT"
+    elog
+
+    log "Waiting for scan completion (timeout ${TIMEOUT}s)"
+    ELAPSED=0
+    SBOM_STATUS="running"
+    REPORT=""
+    while (( ELAPSED < TIMEOUT )); do
+        sleep "$POLL_INTERVAL"
+        ELAPSED=$((ELAPSED + POLL_INTERVAL))
+        RAW=$(api GET "/code/sbom/${SBOM_SCAN_ID}") || {
+            warn "Poll failed (network error) — retrying..."
+            continue
+        }
+        parse_response "$RAW"
+        if [[ "$HTTP_STATUS" != "200" ]]; then
+            warn "Poll failed (HTTP ${HTTP_STATUS}) — retrying..."
+            continue
+        fi
+        # API refusals arrive as resolved bodies with a status_code and no
+        # data (returned-HTTPException envelope) — fail fast, don't spin.
+        API_ERR_CODE=$(jq_safe "$HTTP_BODY" 'if .data == null then (.status_code // .detail.status_code // empty) else empty end')
+        if [[ -n "$API_ERR_CODE" ]]; then
+            API_MSG=$(jq_safe "$HTTP_BODY" '.detail.error.message // .detail // "unknown API error"')
+            post_commit_status "error" "Scan lookup refused (HTTP-level ${API_ERR_CODE}): ${API_MSG}"
+            fail "Scan lookup refused (${API_ERR_CODE}): ${API_MSG}"
+        fi
+        SBOM_STATUS=$(jq_safe "$HTTP_BODY" '.data.status // "running"')
+        info "status=${SBOM_STATUS} (${ELAPSED}s elapsed)"
+        # completed_with_errors = partial tool failure with a report (and
+        # gate) still produced — terminal, not a reason to spin to timeout.
+        case "$SBOM_STATUS" in
+            completed|completed_with_errors|failed)
+                REPORT="$HTTP_BODY"
+                break
+                ;;
+        esac
+    done
+    echo "status=${SBOM_STATUS}" >> "$GITHUB_OUTPUT"
+
+    if [[ "$SBOM_STATUS" != "completed" && "$SBOM_STATUS" != "completed_with_errors" ]]; then
+        if [[ "$SBOM_STATUS" == "failed" ]]; then
+            ERR=$(jq_safe "$REPORT" '.data.error // "unknown error"')
+            post_commit_status "error" "SBOM scan failed: ${ERR}"
+            fail "SBOM scan failed: ${ERR}"
+        fi
+        post_commit_status "error" "SBOM scan timed out after ${TIMEOUT}s"
+        fail "SBOM scan did not complete within ${TIMEOUT}s"
+    fi
+    [[ "$SBOM_STATUS" == "completed_with_errors" ]] \
+        && warn "Scan completed with partial tool failures — the gate verdict below may be based on incomplete data"
+    elog
+
+    log "Evaluating release gate"
+    # Effective gate = rulebook verdict with governed exceptions
+    # (risk-accepted / false-positive findings) already applied. Resolved
+    # ONCE so the verdict, policy version and blocking rules can never come
+    # from different gate objects.
+    GATE_OBJ=$(jq_safe "$REPORT" '.data.release_gate_effective // .data.release_gate // {}')
+    GATE=$(jq_safe "$GATE_OBJ" '.gate // empty')
+    POLICY_VERSION=$(jq_safe "$GATE_OBJ" '.policy_version // "unknown"')
+    BLOCKING_RULES=$(jq_safe "$GATE_OBJ" '.blocking_rule_ids // [] | join(", ")')
+    COMPONENTS=$(jq_safe "$REPORT" '.data.sbom_summary.total_components // "?"')
+    LICENSE_VERDICT=$(jq_safe "$REPORT" '.data.compliance.verdict // "?"')
+
+    # Scan-integrity gates — a verdict computed over nothing must never turn
+    # a required check green:
+    # * The backend marks a scan "completed" even when the clone yielded no
+    #   files (e.g. private repo without a platform Git connection silently
+    #   degrades to an unauthenticated clone) — the diagnostic lands in
+    #   .data.error and the gate happily passes over an empty SBOM.
+    # * A platform-side Grype/Trivy failure is non-blocking there too: the
+    #   gate is computed over zero vulnerabilities with the failure recorded
+    #   only in security.scan_status.
+    SCAN_DIAG=$(jq_safe "$REPORT" '.data.error // empty')
+    if [[ -n "$SCAN_DIAG" ]]; then
+        post_commit_status "error" "Scan unusable: ${SCAN_DIAG}"
+        fail "Scan produced no usable results: ${SCAN_DIAG}"
+    fi
+    if [[ "$COMPONENTS" == "0" ]]; then
+        post_commit_status "error" "SBOM contains 0 components — nothing was evaluated"
+        fail "SBOM contains 0 components — check the platform's Git connection (owned by the API key's team) and the branch name"
+    fi
+    CVE_SCAN_STATUS=$(jq_safe "$REPORT" '.data.security.scan_status // "completed"')
+    if [[ "$CVE_SCAN_STATUS" == "failed" ]]; then
+        CVE_ERR=$(jq_safe "$REPORT" '.data.security.scan_error // "unknown"')
+        post_commit_status "error" "Dependency CVE scan failed platform-side: ${CVE_ERR}"
+        fail "Dependency CVE scan failed platform-side (${CVE_ERR}) — the gate verdict would be unreliable"
+    fi
+
+    if [[ -z "$GATE" ]]; then
+        # A completed report without a gate is a platform contract break —
+        # treat as error rather than silently passing.
+        post_commit_status "error" "Completed scan carried no release-gate verdict"
+        fail "No release-gate verdict in the completed report (scan ${SBOM_SCAN_ID})"
+    fi
+
+    {
+        echo "release_gate=${GATE}"
+        echo "release_gate_policy_version=${POLICY_VERSION}"
+        # Dashboard deep link — the API report endpoint requires an
+        # X-API-Key header, so a raw API URL is not clickable from a browser.
+        echo "report_url=${STATUS_TARGET_URL}"
+    } >> "$GITHUB_OUTPUT"
+
+    SUMMARY_MD=$(cat <<EOF
+### Release Gate — \`${INPUT_CODE_REPO}\`
+
+| | |
+|---|---|
+| **Gate verdict** | ${GATE} |
+| Policy version | ${POLICY_VERSION} |
+| Blocking rules | ${BLOCKING_RULES:-none} |
+| SBOM components | ${COMPONENTS} |
+| License verdict | ${LICENSE_VERDICT} |
+| Scan | ${SBOM_SCAN_ID} |
+EOF
+)
+    echo "$SUMMARY_MD" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+    info "Gate: ${GATE} (policy ${POLICY_VERSION})${BLOCKING_RULES:+ — blocking: ${BLOCKING_RULES}}"
+
+    case "$GATE" in
+        pass)
+            post_commit_status "success" "Release gate passed (policy ${POLICY_VERSION})"
+            ;;
+        review)
+            # "failure" (not "pending") so a required check is actionable:
+            # triage the findings on the platform, then re-run the workflow.
+            post_commit_status "failure" "Manual review required${BLOCKING_RULES:+ — ${BLOCKING_RULES}} (triage on the platform, then re-run)"
+            ;;
+        fail)
+            post_commit_status "failure" "Release gate failed${BLOCKING_RULES:+ — ${BLOCKING_RULES}}"
+            ;;
+        *)
+            post_commit_status "error" "Unknown release-gate verdict: ${GATE}"
+            fail "Unknown release-gate verdict: ${GATE}"
+            ;;
+    esac
+    elog
+
+    case "$FAIL_ON_GATE" in
+        none) ;;
+        review)
+            [[ "$GATE" == "review" || "$GATE" == "fail" ]] \
+                && fail "Release gate verdict '${GATE}' (fail_on_gate=review). Scan: ${SBOM_SCAN_ID}"
+            ;;
+        *)
+            [[ "$GATE" == "fail" ]] \
+                && fail "Release gate failed${BLOCKING_RULES:+ — blocking rules: ${BLOCKING_RULES}}. Scan: ${SBOM_SCAN_ID}"
+            ;;
+    esac
+
+    echo ""
+    echo "========================================="
+    echo "  Release gate: ${GATE}"
+    echo "  Policy: ${POLICY_VERSION}"
+    echo "  Scan ID: ${SBOM_SCAN_ID}"
+    echo "========================================="
+    exit 0
+fi
 
 # ── Container scan branch ────────────────────────────────────────────
 # When ``container_image`` is set we use the synchronous /api/scans

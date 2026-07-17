@@ -60,6 +60,43 @@ inputs:
       provider for this user".
     required: false
     default: ""
+  code_repo:
+    description: >
+      Repository (owner/repo) for the SBOM + license release-gate scan.
+      Setting this triggers the code-security path: the platform generates
+      an SBOM (Syft), evaluates dependency CVEs + license policy, computes
+      the versioned release gate (pass/review/fail), and the action posts
+      the verdict as an "offload/release-gate" commit status so it can be
+      required via branch protection. Usually `${{ github.repository }}`.
+      Takes precedence over ``container_image`` and ``target_url``.
+      The repository must be reachable by the platform's Git connection.
+    required: false
+    default: ""
+  code_branch:
+    description: >
+      Branch for the code-security scan. Defaults to the PR head branch
+      (pull_request events) or the pushed branch; empty means the repo's
+      default branch.
+    required: false
+    default: ""
+  git_provider:
+    description: "Git provider of code_repo on the platform: github or bitbucket"
+    required: false
+    default: "github"
+  set_commit_status:
+    description: >
+      Post the release-gate verdict as a commit status ("offload/release-gate")
+      on the scanned commit. Requires the workflow token to have
+      `statuses: write` permission.
+    required: false
+    default: "true"
+  fail_on_gate:
+    description: >
+      Fail the job based on the release-gate verdict: "fail" (default —
+      only a failing gate breaks the build), "review" (review OR fail
+      breaks the build), or "none" (report only).
+    required: false
+    default: "fail"
   scan_types:
     description: >
       Comma-separated list of scan types to run.
@@ -143,6 +180,15 @@ outputs:
   report_url:
     description: "URL to download the full HTML report"
     value: ${{ steps.scan.outputs.report_url }}
+  release_gate:
+    description: "Release-gate verdict for code scans: pass, review, or fail"
+    value: ${{ steps.scan.outputs.release_gate }}
+  release_gate_policy_version:
+    description: "Policy version that produced the release-gate verdict"
+    value: ${{ steps.scan.outputs.release_gate_policy_version }}
+  sbom_scan_id:
+    description: "SBOM/license scan ID on the platform (code scans)"
+    value: ${{ steps.scan.outputs.sbom_scan_id }}
 
 runs:
   using: "composite"
@@ -156,6 +202,11 @@ runs:
         INPUT_TARGET_URL: ${{ inputs.target_url }}
         INPUT_CONTAINER_IMAGE: ${{ inputs.container_image }}
         INPUT_CLOUD_ACCOUNT_ID: ${{ inputs.cloud_account_id }}
+        INPUT_CODE_REPO: ${{ inputs.code_repo }}
+        INPUT_CODE_BRANCH: ${{ inputs.code_branch }}
+        INPUT_GIT_PROVIDER: ${{ inputs.git_provider }}
+        INPUT_SET_COMMIT_STATUS: ${{ inputs.set_commit_status }}
+        INPUT_FAIL_ON_GATE: ${{ inputs.fail_on_gate }}
         INPUT_SCAN_TYPES: ${{ inputs.scan_types }}
         INPUT_STANDARDS: ${{ inputs.standards }}
         INPUT_FAIL_ON: ${{ inputs.fail_on }}
