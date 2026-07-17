@@ -67,7 +67,8 @@ inputs:
       an SBOM (Syft), evaluates dependency CVEs + license policy, computes
       the versioned release gate (pass/review/fail), and the action posts
       the verdict as an "offload/release-gate" commit status so it can be
-      required via branch protection. Usually `${{ github.repository }}`.
+      required via branch protection. Usually the calling workflow's
+      "owner/repo" (GitHub Actions' repository context value).
       Takes precedence over ``container_image`` and ``target_url``.
       The repository must be reachable by the platform's Git connection.
     required: false
