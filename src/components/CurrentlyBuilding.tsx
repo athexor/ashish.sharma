@@ -75,9 +75,7 @@ export function CurrentlyBuilding() {
                     {item.title}
                   </h3>
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 text-xs ${statusColors[item.statusType]}`}
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className={`inline-flex items-center px-2 py-0.5 text-xs ${statusColors[item.statusType]} font-mono`} >
                     {item.status}
                   </span>
                 </div>
