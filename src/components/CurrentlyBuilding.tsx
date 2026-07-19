@@ -94,9 +94,7 @@ export function CurrentlyBuilding() {
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span
-                    className="text-xs text-muted-foreground"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className="text-xs text-muted-foreground font-mono">
                     Progress
                   </span>
                   <span
