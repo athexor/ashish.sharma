@@ -98,9 +98,7 @@ export function CurrentlyBuilding() {
                     Progress
                   </span>
                   <span
-                    className="text-xs text-muted-foreground"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className="text-xs text-muted-foreground font-mono">
                     {item.progress}%
                   </span>
                 </div>
