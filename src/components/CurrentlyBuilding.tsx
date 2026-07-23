@@ -115,9 +115,7 @@ export function CurrentlyBuilding() {
                 {item.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs text-muted-foreground"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
+                    className="text-xs text-muted-foreground font-mono">
                     {tag}
                   </span>
                 ))}
